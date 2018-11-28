@@ -37,10 +37,7 @@ void led_thread() {
 RawSerial pc(USBTX, USBRX);
 
 void wait_nb(uint16_t ms) {
-    while (ms > 0) {
-        ms--;
-        wait_ms(1);
-    }
+    wait_ms(ms);
 }
 void test_failed() {
     greentea_send_kv("test_failed", 1);
@@ -70,6 +67,7 @@ void post_test_callback(MbedCloudClientResource *resource, const uint8_t *buffer
 }
 
 void spdmc_testsuite_connect(void) {
+    int i = 0;
     int iteration = 0;
     char _key[20] = { };
     char _value[128] = { };
@@ -211,10 +209,9 @@ void spdmc_testsuite_connect(void) {
     client.on_registered(&registered);
     client.register_and_connect();
 
-    int timeout = 60000;
-    while (timeout && !client.is_client_registered()) {
-        timeout--;
-        wait_ms(10);
+    i = 600; // wait 60 seconds
+    while (i-- > 0 && !client.is_client_registered()) {
+        wait_ms(100);
     }
 
     // Get registration status.
@@ -239,8 +236,11 @@ void spdmc_testsuite_connect(void) {
         GREENTEA_TESTCASE_START("Pelion DM Directory");
         int reg_status;
 
-        logger("[INFO] Wait 5 seconds for Device Directory to update after initial registration.\r\n");
-        wait_nb(5000);
+        logger("[INFO] Wait up to 10 seconds for Device Directory to update after initial registration.\r\n");
+        i = 100;
+        while (i-- > 0 and !endpointInfo) {
+            wait(100);
+        }
 
         // Start host tests with device id
         logger("[INFO] Starting Pelion DM verification using Python SDK...\r\n");
@@ -280,8 +280,11 @@ void spdmc_testsuite_connect(void) {
         GREENTEA_TESTCASE_START("Post-reset Identity");
         int identity_status;
 
-        logger("[INFO] Wait 2 seconds for Device Directory to update after reboot.\r\n");
-        wait_nb(2000);
+        logger("[INFO] Wait up to 5 seconds for Device Directory to update after reboot.\r\n");
+        i = 50;
+        while (i-- > 0 and !endpointInfo) {
+            wait(100);
+        }
 
         // Wait for Host Test to verify consistent device ID (blocking here)
         logger("[INFO] Verifying consistent Device ID...\r\n");
@@ -306,8 +309,8 @@ void spdmc_testsuite_connect(void) {
         // LwM2M tests
         logger("[INFO] Beginning LwM2M resource tests.\r\n");
 
+        wait_nb(1000);
 
-        wait_nb(500);
         // ---------------------------------------------
         // GET test
         GREENTEA_TESTCASE_START("Resource LwM2M GET");
@@ -334,8 +337,8 @@ void spdmc_testsuite_connect(void) {
         }
         GREENTEA_TESTCASE_FINISH("Resource LwM2M GET", (get_status == 0), (get_status != 0));
 
-
         wait_nb(500);
+
         // ---------------------------------------------
         // SET test
         GREENTEA_TESTCASE_START("Resource LwM2M SET");
@@ -364,8 +367,8 @@ void spdmc_testsuite_connect(void) {
         }
         GREENTEA_TESTCASE_FINISH("Resource LwM2M SET", (set_status == 0), (set_status != 0));
 
-
         wait_nb(500);
+
         // ---------------------------------------------
         // PUT Test
         GREENTEA_TESTCASE_START("Resource LwM2M PUT");
@@ -401,8 +404,8 @@ void spdmc_testsuite_connect(void) {
 
         GREENTEA_TESTCASE_FINISH("Resource LwM2M PUT", (put_status == 0), (put_status != 0));
 
-
         wait_nb(500);
+
         // ---------------------------------------------
         // POST test
         GREENTEA_TESTCASE_START("Resource LwM2M POST");
@@ -435,7 +438,7 @@ void spdmc_testsuite_connect(void) {
         GREENTEA_TESTSUITE_RESULT((get_status == 0) && (set_status == 0) && (put_status == 0) && (post_status == 0));
 
         while (1) {
-            wait(1);
+            wait(100);
         }
     }
 }

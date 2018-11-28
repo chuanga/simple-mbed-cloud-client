@@ -30,7 +30,6 @@
 
 uint32_t test_timeout = 30*60;
 
-// Heartbeat blinky (to indicate that the board is still alive)
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
 void led_thread() {
@@ -39,12 +38,8 @@ void led_thread() {
 }
 RawSerial pc(USBTX, USBRX);
 
-// Output / logging
 void wait_nb(uint16_t ms) {
-    while (ms > 0) {
-        ms--;
-        wait_ms(1);
-    }
+    wait_ms(ms);
 }
 void test_failed() {
     greentea_send_kv("test_failed", 1);
@@ -105,6 +100,7 @@ void registered(const ConnectorClientEndpointInfo *endpoint) {
 }
 
 void spdmc_testsuite_update(void) {
+    int i = 0;
     int iteration = 0;
     char _key[20] = { };
     char _value[128] = { };
@@ -248,10 +244,9 @@ void spdmc_testsuite_update(void) {
     client.on_registered(&registered);
     client.register_and_connect();
 
-    int timeout = 60000;
-    while (timeout && !client.is_client_registered()) {
-        timeout--;
-        wait_ms(1);
+    i = 600; // wait 60 seconds
+    while (i-- > 0 && !client.is_client_registered()) {
+        wait_ms(100);
     }
 
     // Get registration status.
@@ -276,8 +271,11 @@ void spdmc_testsuite_update(void) {
         GREENTEA_TESTCASE_START("Pelion DM Directory");
         int reg_status;
 
-        logger("[INFO] Wait 5 seconds for Device Directory to update after initial registration.\r\n");
-        wait_nb(5000);
+        logger("[INFO] Wait up to 10 seconds for Device Directory to update after initial registration.\r\n");
+        i = 100;
+        while (i-- > 0 and !endpointInfo) {
+            wait(100);
+        }
 
         // Start host tests with device id
         logger("[INFO] Starting Pelion DM verification using Python SDK...\r\n");
@@ -332,8 +330,11 @@ void spdmc_testsuite_update(void) {
         GREENTEA_TESTCASE_START("Post-update Identity");
         int identity_status;
 
-        logger("[INFO] Wait 2 seconds for Device Directory to update after reboot.\r\n");
-        wait_nb(2000);
+        logger("[INFO] Wait up to 5 seconds for Device Directory to update after reboot.\r\n");
+        i = 50;
+        while (i-- > 0 and !endpointInfo) {
+            wait(100);
+        }
 
         // Wait for Host Test to verify consistent device ID (blocking here)
         logger("[INFO] Verifying consistent Device ID...\r\n");
@@ -358,7 +359,7 @@ void spdmc_testsuite_update(void) {
         GREENTEA_TESTSUITE_RESULT(identity_status == 0);
 
         while (1) {
-            wait_nb(1000);
+            wait(100);
         }
     }
 }
